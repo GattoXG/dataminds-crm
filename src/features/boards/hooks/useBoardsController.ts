@@ -18,6 +18,7 @@ import { useCreateActivity } from '@/lib/query/hooks/useActivitiesQuery';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { useRealtimeSyncKanban } from '@/lib/realtime';
 import { useToast } from '@/context/ToastContext';
+import { useAuth } from '@/context/AuthContext';
 
 export const isDealRotting = (deal: DealView) => {
   const dateToCheck = deal.lastStageChangeDate || deal.updatedAt;
@@ -38,10 +39,11 @@ export const getActivityStatus = (deal: DealView) => {
 export const useBoardsController = () => {
   // Toast for feedback
   const { addToast } = useToast();
+  const { profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // TanStack Query hooks
-  const { data: boards = [], isLoading: boardsLoading } = useBoards();
+  const { data: boards = [], isLoading: boardsLoading, isFetched: boardsFetched } = useBoards();
   const { data: defaultBoard } = useDefaultBoard();
   const createBoardMutation = useCreateBoard();
   const updateBoardMutation = useUpdateBoard();
@@ -247,13 +249,17 @@ export const useBoardsController = () => {
   };
 
   const handleCreateBoard = async (boardData: Omit<Board, 'id' | 'createdAt'>, order?: number) => {
-    createBoardMutation.mutate({ board: boardData, order }, {
+    createBoardMutation.mutate({ board: boardData, order, companyId: profile?.company_id }, {
       onSuccess: newBoard => {
         if (newBoard) {
           setActiveBoardId(newBoard.id);
         }
         setIsCreateBoardModalOpen(false);
         setIsWizardOpen(false);
+      },
+      onError: (error) => {
+        console.error('[handleCreateBoard] Error:', error);
+        addToast(error.message || 'Erro ao criar board', 'error');
       },
     });
   };
@@ -389,6 +395,8 @@ export const useBoardsController = () => {
   return {
     // Boards
     boards,
+    boardsLoading, // Specific loading state for boards
+    boardsFetched, // True after first successful fetch
     activeBoard,
     activeBoardId: effectiveActiveBoardId, // Sempre retorna o ID válido
     handleSelectBoard,

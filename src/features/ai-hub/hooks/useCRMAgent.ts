@@ -40,11 +40,10 @@ export function useCRMAgent(options: UseCRMAgentOptions = {}) {
 
   // Cria o modelo Google com Gemini 2.5 Flash
   const getModel = useCallback(() => {
-    const apiKey = aiApiKey || import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error('API Key não configurada. Vá em Configurações para adicionar.');
+    if (!aiApiKey) {
+      throw new Error('API Key não configurada. Vá em Configurações > IA para adicionar.');
     }
-    const google = createGoogleGenerativeAI({ apiKey });
+    const google = createGoogleGenerativeAI({ apiKey: aiApiKey });
     return google('gemini-2.5-flash');
   }, [aiApiKey]);
 

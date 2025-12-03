@@ -99,7 +99,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // AI Config state
   const [aiProvider, setAiProviderState] = useState<AIConfig['provider']>('google');
-  const [aiApiKey, setAiApiKeyState] = useState<string>(import.meta.env.VITE_GEMINI_API_KEY || '');
+  const [aiApiKey, setAiApiKeyState] = useState<string>('');
   const [aiModel, setAiModelState] = useState<string>('gemini-2.5-flash');
   const [aiThinking, setAiThinkingState] = useState<boolean>(true);
   const [aiSearch, setAiSearchState] = useState<boolean>(true);
@@ -222,7 +222,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const setAiProvider = useCallback(
     async (provider: AIConfig['provider']) => {
       setAiProviderState(provider);
-      await updateSettings({ ai_provider: provider });
+      await updateSettings({ aiProvider: provider });
     },
     [updateSettings]
   );
@@ -230,7 +230,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const setAiApiKey = useCallback(
     async (key: string) => {
       setAiApiKeyState(key);
-      await updateSettings({ ai_api_key: key });
+      await updateSettings({ aiApiKey: key });
     },
     [updateSettings]
   );
@@ -238,7 +238,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const setAiModel = useCallback(
     async (model: string) => {
       setAiModelState(model);
-      await updateSettings({ ai_model: model });
+      await updateSettings({ aiModel: model });
     },
     [updateSettings]
   );
@@ -246,7 +246,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const setAiThinking = useCallback(
     async (enabled: boolean) => {
       setAiThinkingState(enabled);
-      await updateSettings({ ai_thinking: enabled });
+      await updateSettings({ aiThinking: enabled });
     },
     [updateSettings]
   );
@@ -254,7 +254,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const setAiSearch = useCallback(
     async (enabled: boolean) => {
       setAiSearchState(enabled);
-      await updateSettings({ ai_search: enabled });
+      await updateSettings({ aiSearch: enabled });
     },
     [updateSettings]
   );
@@ -262,7 +262,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const setAiAnthropicCaching = useCallback(
     async (enabled: boolean) => {
       setAiAnthropicCachingState(enabled);
-      await updateSettings({ ai_anthropic_caching: enabled });
+      await updateSettings({ aiAnthropicCaching: enabled });
     },
     [updateSettings]
   );

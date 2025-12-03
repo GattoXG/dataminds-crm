@@ -466,8 +466,11 @@ export const BoardCreationWizard: React.FC<BoardCreationWizardProps> = ({
         }
       : undefined;
 
+    // IMPORTANT: Use boardToCreate.name (not .boardName)
+    // The AI returns boardName, but it's normalized to 'name' at line ~256
+    // See regression tests in BoardCreationWizard.test.tsx
     onCreate({
-      name: boardToCreate.boardName,
+      name: boardToCreate.name,
       description: boardToCreate.description,
       linkedLifecycleStage: boardToCreate.linkedLifecycleStage,
       template: 'CUSTOM',

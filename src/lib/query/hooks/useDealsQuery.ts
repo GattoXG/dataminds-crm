@@ -9,7 +9,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../index';
-import { dealsService, contactsService, companiesService } from '@/lib/supabase';
+import { dealsService, contactsService, companiesService, boardStagesService } from '@/lib/supabase';
 import type { Deal, DealView, DealStatus, DealItem } from '@/types';
 
 // ============ QUERY HOOKS ============
@@ -66,11 +66,12 @@ export const useDealsView = (filters?: DealsFilters) => {
       ? [...queryKeys.deals.list(filters as Record<string, unknown>), 'view']
       : [...queryKeys.deals.lists(), 'view'],
     queryFn: async () => {
-      // Fetch all data in parallel
-      const [dealsResult, contactsResult, companiesResult] = await Promise.all([
+      // Fetch all data in parallel (including stages for stageLabel)
+      const [dealsResult, contactsResult, companiesResult, stagesResult] = await Promise.all([
         dealsService.getAll(),
         contactsService.getAll(),
         companiesService.getAll(),
+        boardStagesService.getAll(),
       ]);
 
       if (dealsResult.error) throw dealsResult.error;
@@ -78,12 +79,14 @@ export const useDealsView = (filters?: DealsFilters) => {
       const deals = dealsResult.data || [];
       const contacts = contactsResult.data || [];
       const companies = companiesResult.data || [];
+      const stages = stagesResult.data || [];
 
       // Create lookup maps
       const contactMap = new Map(contacts.map(c => [c.id, c]));
       const companyMap = new Map(companies.map(c => [c.id, c]));
+      const stageMap = new Map(stages.map(s => [s.id, s.label || s.name]));
 
-      // Enrich deals with company/contact names
+      // Enrich deals with company/contact names and stageLabel
       let enrichedDeals: DealView[] = deals.map(deal => {
         const contact = contactMap.get(deal.contactId);
         const company = companyMap.get(deal.companyId);
@@ -92,6 +95,7 @@ export const useDealsView = (filters?: DealsFilters) => {
           companyName: company?.name || 'Sem empresa',
           contactName: contact?.name || 'Sem contato',
           contactEmail: contact?.email || '',
+          stageLabel: stageMap.get(deal.status) || 'Estágio não identificado',
         };
       });
 
@@ -143,11 +147,12 @@ export const useDealsByBoard = (boardId: string) => {
   return useQuery<DealView[]>({
     queryKey: queryKeys.deals.list({ boardId }),
     queryFn: async () => {
-      // Fetch all data in parallel
-      const [dealsResult, contactsResult, companiesResult] = await Promise.all([
+      // Fetch all data in parallel (including stages for stageLabel)
+      const [dealsResult, contactsResult, companiesResult, stagesResult] = await Promise.all([
         dealsService.getAll(),
         contactsService.getAll(),
         companiesService.getAll(),
+        boardStagesService.getByBoardId(boardId),
       ]);
 
       if (dealsResult.error) throw dealsResult.error;
@@ -155,12 +160,14 @@ export const useDealsByBoard = (boardId: string) => {
       const deals = (dealsResult.data || []).filter(d => d.boardId === boardId);
       const contacts = contactsResult.data || [];
       const companies = companiesResult.data || [];
+      const stages = stagesResult.data || [];
 
       // Create lookup maps
       const contactMap = new Map(contacts.map(c => [c.id, c]));
       const companyMap = new Map(companies.map(c => [c.id, c]));
+      const stageMap = new Map(stages.map(s => [s.id, s.label || s.name]));
 
-      // Enrich deals with company/contact names
+      // Enrich deals with company/contact names and stageLabel
       const enrichedDeals: DealView[] = deals.map(deal => {
         const contact = contactMap.get(deal.contactId);
         const company = companyMap.get(deal.companyId);
@@ -169,6 +176,7 @@ export const useDealsByBoard = (boardId: string) => {
           companyName: company?.name || 'Sem empresa',
           contactName: contact?.name || 'Sem contato',
           contactEmail: contact?.email || '',
+          stageLabel: stageMap.get(deal.status) || 'Estágio não identificado',
         };
       });
 

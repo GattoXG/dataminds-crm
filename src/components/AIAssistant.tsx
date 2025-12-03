@@ -60,8 +60,14 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
   const systemPrompt = useMemo(() => {
     if (mode === 'board' && activeBoard) {
       const boardDeals = deals.filter(d => d.boardId === activeBoard.id);
+      // Criar mapa de stages para lookup rápido
+      const stagesMap = new Map(activeBoard.stages.map(s => [s.id, s.label]));
       const dealsSummary = boardDeals
-        .map(d => `- ${d.title}: $${d.value} (${d.status})`)
+        .map(d => {
+          // Resolver stage label ao invés de mostrar UUID
+          const stageLabel = stagesMap.get(d.status) || 'Estágio não identificado';
+          return `- ${d.title}: $${d.value} (${stageLabel})`;
+        })
         .join('\n');
 
       // Find connections

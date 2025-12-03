@@ -1,6 +1,6 @@
 import { supabase } from './client';
 import { Board, BoardStage, BoardGoal, AgentPersona } from '@/types';
-import { sanitizeUUID } from './utils';
+import { sanitizeUUID, requireUUID } from './utils';
 
 // ============================================
 // BOARDS SERVICE
@@ -85,7 +85,7 @@ const transformBoard = (db: DbBoard, stages: DbBoardStage[]): Board => {
 };
 
 // Transform App -> DB
-const transformToDb = (board: Omit<Board, 'id' | 'createdAt'>, companyId?: string, order?: number): Partial<DbBoard> => ({
+const transformToDb = (board: Omit<Board, 'id' | 'createdAt'>, order?: number): Partial<DbBoard> => ({
   name: board.name,
   description: board.description || null,
   is_default: board.isDefault || false,
@@ -102,18 +102,16 @@ const transformToDb = (board: Omit<Board, 'id' | 'createdAt'>, companyId?: strin
   entry_trigger: board.entryTrigger || null,
   automation_suggestions: board.automationSuggestions || null,
   position: order ?? 0,
-  ...(sanitizeUUID(companyId) && { company_id: sanitizeUUID(companyId) }),
 });
 
 // Transform App Stage -> DB Stage
-const transformStageToDb = (stage: BoardStage, boardId: string, orderNum: number, companyId?: string): Partial<DbBoardStage> => ({
-  board_id: boardId, // boardId já vem validado do create/update
+const transformStageToDb = (stage: BoardStage, boardId: string, orderNum: number): Partial<DbBoardStage> => ({
+  board_id: boardId,
   name: stage.label,
   label: stage.label,
   color: stage.color || 'bg-gray-500',
   order: orderNum,
   linked_lifecycle_stage: stage.linkedLifecycleStage || null,
-  ...(sanitizeUUID(companyId) && { company_id: sanitizeUUID(companyId) }),
 });
 
 export const boardsService = {
@@ -139,6 +137,9 @@ export const boardsService = {
 
   async create(board: Omit<Board, 'id' | 'createdAt'>, companyId: string, order?: number): Promise<{ data: Board | null; error: Error | null }> {
     try {
+      // Validar company_id obrigatório
+      const validCompanyId = requireUUID(companyId, 'company_id');
+
       // Get next order if not provided
       let boardOrder = order;
       if (boardOrder === undefined) {
@@ -151,18 +152,27 @@ export const boardsService = {
       }
 
       // 1. Create board
+      const boardData = {
+        ...transformToDb(board, boardOrder),
+        company_id: validCompanyId,
+      };
+
       const { data: newBoard, error: boardError } = await supabase
         .from('boards')
-        .insert(transformToDb(board, companyId, boardOrder))
+        .insert(boardData)
         .select()
         .single();
 
-      if (boardError) return { data: null, error: boardError };
+      if (boardError) {
+        console.error('[boardsService.create] Board insert error:', boardError);
+        return { data: null, error: boardError };
+      }
 
-      // 2. Create stages using transformStageToDb
-      const stagesToInsert = (board.stages || []).map((stage, index) => 
-        transformStageToDb(stage, newBoard.id, index, companyId)
-      );
+      // 2. Create stages
+      const stagesToInsert = (board.stages || []).map((stage, index) => ({
+        ...transformStageToDb(stage, newBoard.id, index),
+        company_id: validCompanyId,
+      }));
 
       if (stagesToInsert.length > 0) {
         const { error: stagesError } = await supabase
@@ -225,13 +235,16 @@ export const boardsService = {
 
       // Update stages if provided
       if (updates.stages && companyId) {
+        const validCompanyId = requireUUID(companyId, 'company_id');
+        
         // Delete existing stages
         await supabase.from('board_stages').delete().eq('board_id', id);
         
-        // Insert new stages using transformStageToDb
-        const stagesToInsert = updates.stages.map((stage, index) => 
-          transformStageToDb(stage, id, index, companyId)
-        );
+        // Insert new stages
+        const stagesToInsert = updates.stages.map((stage, index) => ({
+          ...transformStageToDb(stage, id, index),
+          company_id: validCompanyId,
+        }));
 
         if (stagesToInsert.length > 0) {
           const { error: stagesError } = await supabase
@@ -398,6 +411,24 @@ export const boardsService = {
 
   async deleteStage(stageId: string): Promise<{ error: Error | null }> {
     try {
+      // Verificar se há deals ativos neste estágio
+      const { count, error: countError } = await supabase
+        .from('deals')
+        .select('*', { count: 'exact', head: true })
+        .eq('stage_id', stageId);
+
+      if (countError) {
+        return { error: countError };
+      }
+
+      if (count && count > 0) {
+        return { 
+          error: new Error(
+            `Não é possível excluir este estágio. Existem ${count} deal(s) nele. Mova os deals para outro estágio primeiro.`
+          ) 
+        };
+      }
+
       const { error } = await supabase
         .from('board_stages')
         .delete()
@@ -406,6 +437,40 @@ export const boardsService = {
       return { error };
     } catch (e) {
       return { error: e as Error };
+    }
+  },
+};
+
+// ============================================
+// BOARD STAGES SERVICE (para lookup de stageLabel)
+// ============================================
+export const boardStagesService = {
+  /** Busca todos os stages */
+  async getAll(): Promise<{ data: DbBoardStage[] | null; error: Error | null }> {
+    try {
+      const { data, error } = await supabase
+        .from('board_stages')
+        .select('*')
+        .order('order', { ascending: true });
+      
+      return { data: data as DbBoardStage[] | null, error };
+    } catch (e) {
+      return { data: null, error: e as Error };
+    }
+  },
+
+  /** Busca stages de um board específico */
+  async getByBoardId(boardId: string): Promise<{ data: DbBoardStage[] | null; error: Error | null }> {
+    try {
+      const { data, error } = await supabase
+        .from('board_stages')
+        .select('*')
+        .eq('board_id', boardId)
+        .order('order', { ascending: true });
+      
+      return { data: data as DbBoardStage[] | null, error };
+    } catch (e) {
+      return { data: null, error: e as Error };
     }
   },
 };

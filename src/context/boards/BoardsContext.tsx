@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Board, BoardStage } from '@/types';
 import { boardsService } from '@/lib/supabase';
 import { useAuth } from '../AuthContext';
+import { useToast } from '../ToastContext';
 import { queryKeys } from '@/lib/query';
 import { useBoards as useTanStackBoards } from '@/lib/query/hooks/useBoardsQuery';
 import { isValidUUID } from '@/lib/supabase/utils';
@@ -46,6 +47,7 @@ const BoardsContext = createContext<BoardsContextType | undefined>(undefined);
 export const BoardsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
+  const { addToast } = useToast();
 
   // ============================================
   // TanStack Query como fonte única de verdade
@@ -179,12 +181,13 @@ export const BoardsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     if (deleteError) {
       console.error('Erro ao deletar stage:', deleteError.message);
+      addToast(deleteError.message, 'error');
       return;
     }
 
     // Invalida cache para TanStack Query atualizar
     await queryClient.invalidateQueries({ queryKey: queryKeys.boards.all });
-  }, [queryClient]);
+  }, [queryClient, addToast]);
 
   // ============================================
   // Helpers (derivados do cache)

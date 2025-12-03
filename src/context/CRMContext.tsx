@@ -350,11 +350,15 @@ const CRMInnerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     const deal = rawDeals.find(l => l.id === id);
     if (deal) {
+      // Busca o label do estágio para exibir no histórico (não o UUID)
+      const targetStage = activeBoard?.stages.find(s => s.id === newStatus);
+      const stageLabel = targetStage?.label || newStatus;
+      
       await addActivity({
         dealId: id,
         dealTitle: deal.title,
         type: 'STATUS_CHANGE',
-        title: `Moveu para ${newStatus}`,
+        title: `Moveu para ${stageLabel}`,
         description: lossReason ? `Motivo da perda: ${lossReason}` : undefined,
         date: new Date().toISOString(),
         user: { name: 'Eu', avatar: 'https://i.pravatar.cc/150?u=me' },
@@ -584,12 +588,16 @@ const CRMInnerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         );
 
         if (!existingAlert) {
+          // Buscar o label do estágio para a mensagem (não UUID)
+          const board = getBoardById(deal.boardId);
+          const stageLabel = board?.stages.find(s => s.id === deal.status)?.label || deal.status;
+          
           await addActivity({
             dealId: deal.id,
             dealTitle: deal.title,
             type: 'TASK',
             title: 'Alerta de Estagnação',
-            description: `Oportunidade parada em ${deal.status} há mais de 10 dias.`,
+            description: `Oportunidade parada em ${stageLabel} há mais de 10 dias.`,
             date: new Date().toISOString(),
             user: { name: 'Sistema', avatar: '' },
             completed: false,
@@ -600,7 +608,7 @@ const CRMInnerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       return stagnantDeals.length;
     }
     return 0;
-  }, [rawDeals, activities, addActivity]);
+  }, [rawDeals, activities, addActivity, getBoardById]);
 
   // Build the context value
   const value: CRMContextType = useMemo(

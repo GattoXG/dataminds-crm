@@ -9,14 +9,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../index';
 import { boardsService } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 import type { Board, BoardStage } from '@/types';
 
 // ============ QUERY HOOKS ============
 
 /**
  * Hook to fetch all boards
+ * Waits for auth to be ready before fetching to ensure RLS works correctly
  */
 export const useBoards = () => {
+  const { user, loading: authLoading } = useAuth();
+  
   return useQuery({
     queryKey: queryKeys.boards.lists(),
     queryFn: async () => {
@@ -25,6 +29,7 @@ export const useBoards = () => {
       return data || [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes - boards don't change often
+    enabled: !authLoading && !!user, // Only fetch when auth is ready
   });
 };
 
@@ -64,11 +69,21 @@ export const useDefaultBoard = () => {
  */
 export const useCreateBoard = () => {
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ board, order }: { board: Omit<Board, 'id' | 'createdAt'>; order?: number }) => {
-      // company_id will be auto-set by trigger
-      const { data, error } = await boardsService.create(board, '', order);
+    mutationFn: async ({ board, order, companyId }: { 
+      board: Omit<Board, 'id' | 'createdAt'>; 
+      order?: number;
+      companyId?: string;
+    }) => {
+      // Usa o companyId passado explicitamente ou pega do profile
+      const effectiveCompanyId = companyId || profile?.company_id;
+      
+      if (!effectiveCompanyId) {
+        throw new Error('Usuário não autenticado ou sem empresa associada');
+      }
+      const { data, error } = await boardsService.create(board, effectiveCompanyId, order);
       if (error) throw error;
       return data!;
     },
@@ -83,10 +98,11 @@ export const useCreateBoard = () => {
  */
 export const useUpdateBoard = () => {
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Board> }) => {
-      const { error } = await boardsService.update(id, updates);
+      const { error } = await boardsService.update(id, updates, profile?.company_id);
       if (error) throw error;
       return { id, updates };
     },

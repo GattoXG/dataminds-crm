@@ -1,6 +1,95 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCRM } from '@/context/CRMContext';
-import { Bot, Key, Cpu, CheckCircle, AlertCircle } from 'lucide-react';
+import { Bot, Key, Cpu, CheckCircle, AlertCircle, Loader2, Save, Trash2 } from 'lucide-react';
+import { useToast } from '@/context/ToastContext';
+
+// Função para validar API key fazendo uma chamada real à API
+async function validateApiKey(provider: string, apiKey: string, model: string): Promise<{ valid: boolean; error?: string }> {
+    if (!apiKey || apiKey.trim().length < 10) {
+        return { valid: false, error: 'Chave muito curta' };
+    }
+
+    try {
+        if (provider === 'google') {
+            // Gemini API validation - usa endpoint generateContent com texto mínimo
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: 'Hi' }] }],
+                        generationConfig: { maxOutputTokens: 1 }
+                    })
+                }
+            );
+
+            if (response.ok) {
+                return { valid: true };
+            }
+
+            const error = await response.json();
+            if (response.status === 400 && error?.error?.message?.includes('API key not valid')) {
+                return { valid: false, error: 'Chave de API inválida' };
+            }
+            if (response.status === 403) {
+                return { valid: false, error: 'Chave sem permissão para este modelo' };
+            }
+            if (response.status === 429) {
+                // Rate limit = key é válida, só está no limite
+                return { valid: true };
+            }
+            return { valid: false, error: error?.error?.message || 'Erro desconhecido' };
+
+        } else if (provider === 'openai') {
+            // OpenAI validation
+            const response = await fetch('https://api.openai.com/v1/models', {
+                headers: { 'Authorization': `Bearer ${apiKey}` }
+            });
+
+            if (response.ok) {
+                return { valid: true };
+            }
+            if (response.status === 401) {
+                return { valid: false, error: 'Chave de API inválida' };
+            }
+            return { valid: false, error: 'Erro ao validar chave' };
+
+        } else if (provider === 'anthropic') {
+            // Anthropic validation - não tem endpoint de validação simples
+            // Fazemos uma chamada mínima
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01'
+                },
+                body: JSON.stringify({
+                    model: model,
+                    max_tokens: 1,
+                    messages: [{ role: 'user', content: 'Hi' }]
+                })
+            });
+
+            if (response.ok) {
+                return { valid: true };
+            }
+            if (response.status === 401) {
+                return { valid: false, error: 'Chave de API inválida' };
+            }
+            if (response.status === 429) {
+                return { valid: true }; // Rate limit = key válida
+            }
+            return { valid: false, error: 'Erro ao validar chave' };
+        }
+
+        return { valid: false, error: 'Provedor não suportado' };
+    } catch (error) {
+        console.error('API Key validation error:', error);
+        return { valid: false, error: 'Erro de conexão. Verifique sua internet.' };
+    }
+}
 
 export const AIConfigSection: React.FC = () => {
     const {
@@ -11,6 +100,64 @@ export const AIConfigSection: React.FC = () => {
         aiSearch, setAiSearch,
         aiAnthropicCaching, setAiAnthropicCaching
     } = useCRM();
+    
+    const { showToast } = useToast();
+
+    // Estado local para o input da key (não salva até validar)
+    const [localApiKey, setLocalApiKey] = useState(aiApiKey);
+    const [isValidating, setIsValidating] = useState(false);
+    const [validationStatus, setValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
+    const [validationError, setValidationError] = useState<string | null>(null);
+
+    // Sync local state when context changes (ex: carregamento inicial)
+    useEffect(() => {
+        setLocalApiKey(aiApiKey);
+        if (aiApiKey) {
+            setValidationStatus('valid'); // Assume válida se já estava salva
+        }
+    }, [aiApiKey]);
+
+    // Reset validation quando muda a key local
+    useEffect(() => {
+        if (localApiKey !== aiApiKey) {
+            setValidationStatus('idle');
+            setValidationError(null);
+        }
+    }, [localApiKey, aiApiKey]);
+
+    const handleSaveApiKey = async () => {
+        if (!localApiKey.trim()) {
+            showToast('Digite uma chave de API', 'error');
+            return;
+        }
+
+        setIsValidating(true);
+        setValidationError(null);
+
+        const result = await validateApiKey(aiProvider, localApiKey, aiModel);
+
+        setIsValidating(false);
+
+        if (result.valid) {
+            setValidationStatus('valid');
+            await setAiApiKey(localApiKey);
+            showToast('Chave de API validada e salva!', 'success');
+        } else {
+            setValidationStatus('invalid');
+            setValidationError(result.error || 'Chave inválida');
+            showToast(result.error || 'Chave de API inválida', 'error');
+        }
+    };
+
+    const handleRemoveApiKey = async () => {
+        setLocalApiKey('');
+        setValidationStatus('idle');
+        setValidationError(null);
+        await setAiApiKey('');
+        showToast('Chave de API removida', 'success');
+    };
+
+    const hasUnsavedChanges = localApiKey !== aiApiKey;
 
     const providers = [
         {
@@ -220,36 +367,102 @@ export const AIConfigSection: React.FC = () => {
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
                         <Key size={14} /> Chave de API ({providers.find(p => p.id === aiProvider)?.name})
                     </label>
-                    <div className="relative">
-                        <input
-                            type="password"
-                            value={aiApiKey}
-                            onChange={(e) => setAiApiKey(e.target.value)}
-                            placeholder={`Cole sua chave ${aiProvider === 'google' ? 'AIza...' : 'sk-...'}`}
-                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all font-mono"
-                        />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                            {aiApiKey ? (
-                                <CheckCircle size={16} className="text-green-500" />
-                            ) : (
-                                <AlertCircle size={16} className="text-amber-500" />
-                            )}
+                    <div className="flex gap-2">
+                        <div className="relative flex-1">
+                            <input
+                                type="password"
+                                value={localApiKey}
+                                onChange={(e) => setLocalApiKey(e.target.value)}
+                                placeholder={`Cole sua chave ${aiProvider === 'google' ? 'AIza...' : 'sk-...'}`}
+                                className={`w-full bg-slate-50 dark:bg-slate-800 border rounded-lg px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all font-mono ${
+                                    validationStatus === 'invalid' 
+                                        ? 'border-red-300 dark:border-red-500/50' 
+                                        : validationStatus === 'valid'
+                                        ? 'border-green-300 dark:border-green-500/50'
+                                        : 'border-slate-200 dark:border-white/10'
+                                }`}
+                            />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                {isValidating ? (
+                                    <Loader2 size={16} className="text-purple-500 animate-spin" />
+                                ) : validationStatus === 'valid' ? (
+                                    <CheckCircle size={16} className="text-green-500" />
+                                ) : validationStatus === 'invalid' ? (
+                                    <AlertCircle size={16} className="text-red-500" />
+                                ) : localApiKey ? (
+                                    <AlertCircle size={16} className="text-amber-500" />
+                                ) : null}
+                            </div>
                         </div>
+                        <button
+                            onClick={handleSaveApiKey}
+                            disabled={isValidating || !localApiKey.trim() || (!hasUnsavedChanges && validationStatus === 'valid')}
+                            className={`px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-all ${
+                                isValidating || !localApiKey.trim() || (!hasUnsavedChanges && validationStatus === 'valid')
+                                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                                    : 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-600/20'
+                            }`}
+                        >
+                            {isValidating ? (
+                                <>
+                                    <Loader2 size={16} className="animate-spin" />
+                                    Validando...
+                                </>
+                            ) : (
+                                <>
+                                    <Save size={16} />
+                                    {hasUnsavedChanges ? 'Salvar' : 'Salvo'}
+                                </>
+                            )}
+                        </button>
+                        {aiApiKey && (
+                            <button
+                                onClick={handleRemoveApiKey}
+                                disabled={isValidating}
+                                className="px-3 py-2.5 rounded-lg text-sm font-medium flex items-center gap-1 transition-all text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-500/30"
+                                title="Remover chave"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        )}
                     </div>
+                    {validationError && (
+                        <p className="text-xs text-red-500 dark:text-red-400 flex items-center gap-1">
+                            <AlertCircle size={12} /> {validationError}
+                        </p>
+                    )}
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Sua chave é salva apenas no navegador (LocalStorage). Nunca compartilhamos com ninguém.
+                        Sua chave é validada antes de salvar e armazenada de forma segura no banco de dados.
                     </p>
                 </div>
 
                 {/* Status Banner */}
-                <div className={`rounded-lg p-4 flex items-start gap-3 ${aiApiKey ? 'bg-green-50 dark:bg-green-900/10 text-green-800 dark:text-green-200' : 'bg-amber-50 dark:bg-amber-900/10 text-amber-800 dark:text-amber-200'}`}>
-                    {aiApiKey ? <CheckCircle className="shrink-0 mt-0.5" size={18} /> : <AlertCircle className="shrink-0 mt-0.5" size={18} />}
+                <div className={`rounded-lg p-4 flex items-start gap-3 ${
+                    validationStatus === 'valid' && aiApiKey
+                        ? 'bg-green-50 dark:bg-green-900/10 text-green-800 dark:text-green-200' 
+                        : validationStatus === 'invalid'
+                        ? 'bg-red-50 dark:bg-red-900/10 text-red-800 dark:text-red-200'
+                        : 'bg-amber-50 dark:bg-amber-900/10 text-amber-800 dark:text-amber-200'
+                }`}>
+                    {validationStatus === 'valid' && aiApiKey ? (
+                        <CheckCircle className="shrink-0 mt-0.5" size={18} />
+                    ) : (
+                        <AlertCircle className="shrink-0 mt-0.5" size={18} />
+                    )}
                     <div className="text-sm">
-                        <p className="font-semibold">{aiApiKey ? 'Pronto para uso' : 'Configuração Pendente'}</p>
+                        <p className="font-semibold">
+                            {validationStatus === 'valid' && aiApiKey
+                                ? 'Pronto para uso'
+                                : validationStatus === 'invalid'
+                                ? 'Chave Inválida'
+                                : 'Configuração Pendente'}
+                        </p>
                         <p className="opacity-90 mt-1">
-                            {aiApiKey
+                            {validationStatus === 'valid' && aiApiKey
                                 ? `O sistema está configurado para usar o ${providers.find(p => p.id === aiProvider)?.name} (${aiModel}).`
-                                : 'Você precisa inserir uma chave de API válida para usar o assistente.'}
+                                : validationStatus === 'invalid'
+                                ? 'Verifique sua chave de API e tente novamente.'
+                                : 'Insira uma chave de API válida e clique em Salvar para usar o assistente.'}
                         </p>
                     </div>
                 </div>

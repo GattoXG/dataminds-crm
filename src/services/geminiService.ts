@@ -15,16 +15,20 @@ export interface AIConfig {
 
 export const analyzeLead = async (
   deal: Deal | DealView,
-  config?: AIConfig
+  config?: AIConfig,
+  /** Nome do estágio atual (para exibir label ao invés de UUID) */
+  stageLabel?: string
 ): Promise<{ suggestion: string; probabilityScore: number }> => {
-  // Fallback to default if no config (legacy support)
   const provider = config?.provider || 'google';
-  const apiKey = config?.apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+  const apiKey = config?.apiKey || '';
   const modelId = config?.model || 'gemini-2.5-flash';
 
   if (!apiKey) return { suggestion: 'Erro: API Key não configurada.', probabilityScore: 0 };
 
   const model = getModel(provider, apiKey, modelId);
+
+  // Usar stageLabel se fornecido, senão fallback para status
+  const stageName = stageLabel || deal.status;
 
   const prompt = `
     Analise esta oportunidade de venda (Deal) e forneça:
@@ -37,7 +41,7 @@ export const analyzeLead = async (
     Dados:
     Título: ${deal.title}
     Valor: ${deal.value}
-    Estágio: ${deal.status}
+    Estágio: ${stageName}
     Probabilidade Atual: ${deal.probability}
     Prioridade: ${deal.priority}
   `;
@@ -61,16 +65,20 @@ export const analyzeLead = async (
 
 export const generateEmailDraft = async (
   deal: Deal | DealView,
-  config?: AIConfig
+  config?: AIConfig,
+  /** Nome do estágio atual (para exibir label ao invés de UUID) */
+  stageLabel?: string
 ): Promise<string> => {
-  // Fallback to default if no config (legacy support)
   const provider = config?.provider || 'google';
-  const apiKey = config?.apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+  const apiKey = config?.apiKey || '';
   const modelId = config?.model || 'gemini-2.5-flash';
 
   if (!apiKey) return 'Erro: API Key não configurada.';
 
   const model = getModel(provider, apiKey, modelId);
+
+  // Usar stageLabel se fornecido, senão fallback para status
+  const stageName = stageLabel || deal.status;
 
   const prompt = `
     Escreva um rascunho de e-mail curto e persuasivo para este cliente.
@@ -79,7 +87,7 @@ export const generateEmailDraft = async (
     Cliente: ${'contactName' in deal ? deal.contactName : 'Cliente'}
     Empresa: ${'companyName' in deal ? deal.companyName : 'Empresa'}
     Negócio: ${deal.title}
-    Estágio Atual: ${deal.status}
+    Estágio Atual: ${stageName}
 
     Retorne apenas o corpo do e-mail.
   `;
@@ -101,9 +109,8 @@ export const generateObjectionResponse = async (
   objection: string,
   config?: AIConfig
 ): Promise<string[]> => {
-  // Fallback to default if no config (legacy support)
   const provider = config?.provider || 'google';
-  const apiKey = config?.apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+  const apiKey = config?.apiKey || '';
   const modelId = config?.model || 'gemini-2.5-flash';
 
   if (!apiKey) return ['Erro: API Key não configurada.'];
@@ -144,9 +151,8 @@ export const processAudioNote = async (
   sentiment: string;
   nextAction?: { type: string; title: string; date: string };
 }> => {
-  // Fallback to default if no config (legacy support)
   const provider = config?.provider || 'google';
-  const apiKey = config?.apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+  const apiKey = config?.apiKey || '';
   const modelId = config?.model || 'gemini-2.5-flash';
 
   if (!apiKey) return { transcription: 'Erro: API Key não configurada.', sentiment: 'Neutro' };
@@ -202,9 +208,8 @@ export const generateDailyBriefing = async (
   data: DailyBriefingData,
   config?: AIConfig
 ): Promise<string> => {
-  // Fallback to default if no config (legacy support)
   const provider = config?.provider || 'google';
-  const apiKey = config?.apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+  const apiKey = config?.apiKey || '';
   const modelId = config?.model || 'gemini-2.5-flash';
 
   if (!apiKey) return 'Erro: API Key não configurada.';
@@ -241,23 +246,27 @@ export const generateDailyBriefing = async (
 export const generateRescueMessage = async (
   deal: Deal | DealView,
   channel: 'EMAIL' | 'WHATSAPP' | 'PHONE',
-  config?: AIConfig
+  config?: AIConfig,
+  /** Nome do estágio atual (para exibir label ao invés de UUID) */
+  stageLabel?: string
 ): Promise<string> => {
-  // Fallback to default if no config (legacy support)
   const provider = config?.provider || 'google';
-  const apiKey = config?.apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+  const apiKey = config?.apiKey || '';
   const modelId = config?.model || 'gemini-2.5-flash';
 
   if (!apiKey) return 'Erro: API Key não configurada.';
 
   const model = getModel(provider, apiKey, modelId);
 
+  // Usar stageLabel se fornecido, senão fallback para status
+  const stageName = stageLabel || deal.status;
+
   let context = `
     Cliente: ${'contactName' in deal ? deal.contactName : 'Cliente'}
     Empresa: ${'companyName' in deal ? deal.companyName : 'Empresa'}
     Negócio: ${deal.title}
     Valor: ${deal.value}
-    Estágio: ${deal.status}
+    Estágio: ${stageName}
     Tempo parado: > 7 dias
     `;
 
@@ -320,9 +329,8 @@ export const parseNaturalLanguageAction = async (
   text: string,
   config?: AIConfig
 ): Promise<ParsedAction | null> => {
-  // Fallback to default if no config (legacy support)
   const provider = config?.provider || 'google';
-  const apiKey = config?.apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+  const apiKey = config?.apiKey || '';
   const modelId = config?.model || 'gemini-2.5-flash';
 
   if (!apiKey) {
@@ -380,9 +388,8 @@ export const chatWithCRM = async (
   context: CRMContext,
   config?: AIConfig
 ): Promise<string> => {
-  // Fallback to default if no config (legacy support)
   const provider = config?.provider || 'google';
-  const apiKey = config?.apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+  const apiKey = config?.apiKey || '';
   const modelId = config?.model || 'gemini-2.5-flash';
 
   if (!apiKey) return 'Erro: API Key não configurada.';
@@ -412,9 +419,8 @@ export const generateBirthdayMessage = async (
   age?: number,
   config?: AIConfig
 ): Promise<string> => {
-  // Fallback to default if no config (legacy support)
   const provider = config?.provider || 'google';
-  const apiKey = config?.apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+  const apiKey = config?.apiKey || '';
   const modelId = config?.model || 'gemini-2.5-flash';
 
   if (!apiKey) return 'Erro: API Key não configurada.';
@@ -488,10 +494,10 @@ export const generateBoardStructure = async (
   config?: AIConfig
 ): Promise<BoardStructureResult> => {
   const provider = config?.provider || 'google';
-  const apiKey = config?.apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+  const apiKey = config?.apiKey || '';
   const modelId = config?.model || 'gemini-2.5-flash';
 
-  if (!apiKey) throw new Error('API Key not configured');
+  if (!apiKey) throw new Error('API Key não configurada. Vá em Configurações > IA para adicionar.');
 
   const model = getModel(provider, apiKey, modelId);
 
@@ -525,10 +531,16 @@ export const generateBoardStructure = async (
 
   try {
     const resultStructure = await generateText({ model, prompt: promptStructure });
-    const jsonStr = resultStructure.text
-      .replace(/```json/g, '')
-      .replace(/```/g, '')
-      .trim();
+    const text = resultStructure.text;
+    
+    // Extrai JSON mesmo quando há texto antes (ex: thinking mode)
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('No JSON found in response:', text);
+      throw new Error('Resposta da IA não contém JSON válido');
+    }
+    
+    const jsonStr = jsonMatch[0];
     return JSON.parse(jsonStr);
   } catch (error) {
     console.error('Error generating board structure:', error);
@@ -556,10 +568,10 @@ export const generateBoardStrategy = async (
   config?: AIConfig
 ): Promise<BoardStrategyResult> => {
   const provider = config?.provider || 'google';
-  const apiKey = config?.apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+  const apiKey = config?.apiKey || '';
   const modelId = config?.model || 'gemini-2.5-flash';
 
-  if (!apiKey) throw new Error('API Key not configured');
+  if (!apiKey) throw new Error('API Key não configurada. Vá em Configurações > IA para adicionar.');
 
   const model = getModel(provider, apiKey, modelId);
 
@@ -597,11 +609,16 @@ export const generateBoardStrategy = async (
 
   try {
     const resultStrategy = await generateText({ model, prompt: promptStrategy });
-    const jsonStr = resultStrategy.text
-      .replace(/```json/g, '')
-      .replace(/```/g, '')
-      .trim();
-    return JSON.parse(jsonStr);
+    const text = resultStrategy.text;
+    
+    // Extrai JSON mesmo quando há texto antes (ex: thinking mode)
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('No JSON found in strategy response:', text);
+      throw new Error('Resposta da IA não contém JSON válido');
+    }
+    
+    return JSON.parse(jsonMatch[0]);
   } catch (error) {
     console.error('Error generating strategy:', error);
     // Return default strategy if step 2 fails
@@ -644,12 +661,11 @@ export const refineBoardWithAI = async (
   config?: AIConfig,
   chatHistory?: { role: 'user' | 'ai'; content: string }[]
 ): Promise<{ message: string; board: GeneratedBoard | null }> => {
-  // Fallback to default if no config (legacy support)
   const provider = config?.provider || 'google';
-  const apiKey = config?.apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+  const apiKey = config?.apiKey || '';
   const modelId = config?.model || 'gemini-2.5-flash';
 
-  if (!apiKey) throw new Error('API Key not configured');
+  if (!apiKey) throw new Error('API Key não configurada. Vá em Configurações > IA para adicionar.');
 
   const model = getModel(provider, apiKey, modelId);
 
@@ -800,12 +816,11 @@ export const chatWithBoardAgent = async (
   },
   config?: AIConfig
 ): Promise<string> => {
-  // Fallback to default if no config (legacy support)
   const provider = config?.provider || 'google';
-  const apiKey = config?.apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+  const apiKey = config?.apiKey || '';
   const modelId = config?.model || 'gemini-2.5-flash';
 
-  if (!apiKey) return 'Erro: API Key não configurada.';
+  if (!apiKey) return 'Erro: API Key não configurada. Vá em Configurações > IA para adicionar.';
 
   const model = getModel(provider, apiKey, modelId);
 

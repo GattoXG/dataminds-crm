@@ -33,13 +33,22 @@ export const ActivityRow: React.FC<ActivityRowProps> = ({
         }
     };
 
-    const { activeBoard } = useCRM();
+    const { activeBoard, boards } = useCRM();
 
     const translateStatus = (status: string) => {
-        // First try to find in active board stages
-        const stage = activeBoard.stages.find(s => s.id === status);
-        if (stage) return stage.label;
+        // Se não parece ser um UUID, retorna direto (já é um label legível)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(status)) {
+            return status;
+        }
 
+        // Procura em TODOS os boards, não só no ativo
+        for (const board of boards) {
+            const stage = board.stages.find(s => s.id === status);
+            if (stage) return stage.label || stage.name;
+        }
+
+        // Fallback para mapeamento legado
         const map: Record<string, string> = {
             'NEW': 'Novas Oportunidades',
             'CONTACTED': 'Contatado',
@@ -52,7 +61,9 @@ export const ActivityRow: React.FC<ActivityRowProps> = ({
             'PROSPECT': 'Oportunidade',
             'CUSTOMER': 'Cliente'
         };
-        return map[status] || status;
+        
+        // Se ainda é UUID e não encontrou, mostra fallback amigável
+        return map[status] || 'Estágio não identificado';
     };
 
     const formatRelativeTime = (dateString: string) => {

@@ -140,6 +140,8 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
       return;
     }
     setIsAnalyzing(true);
+    // Buscar label do estágio para não enviar UUID para a IA
+    const stageLabel = dealBoard?.stages.find(s => s.id === deal.status)?.label;
     const result = await analyzeLead(deal, {
       provider: aiProvider,
       apiKey: aiApiKey,
@@ -147,7 +149,7 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
       thinking: aiThinking,
       search: aiSearch,
       anthropicCaching: aiAnthropicCaching,
-    });
+    }, stageLabel);
     setAiResult({ suggestion: result.suggestion, score: result.probabilityScore });
     setIsAnalyzing(false);
     updateDeal(deal.id, { aiSummary: result.suggestion, probability: result.probabilityScore });
@@ -159,6 +161,8 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
       return;
     }
     setIsDrafting(true);
+    // Buscar label do estágio para não enviar UUID para a IA
+    const stageLabel = dealBoard?.stages.find(s => s.id === deal.status)?.label;
     const draft = await generateEmailDraft(deal, {
       provider: aiProvider,
       apiKey: aiApiKey,
@@ -166,7 +170,7 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
       thinking: aiThinking,
       search: aiSearch,
       anthropicCaching: aiAnthropicCaching,
-    });
+    }, stageLabel);
     setEmailDraft(draft);
     setIsDrafting(false);
   };

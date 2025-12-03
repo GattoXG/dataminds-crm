@@ -139,6 +139,8 @@ export interface DealView extends Deal {
   companyName: string;
   contactName: string;
   contactEmail: string;
+  /** Nome/label do estágio atual (resolvido a partir do status UUID) */
+  stageLabel: string;
 }
 
 export interface Activity {
