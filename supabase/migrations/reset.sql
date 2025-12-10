@@ -25,20 +25,20 @@ BEGIN
     FOR r IN (
         SELECT routine_name 
         FROM information_schema.routines 
-        WHERE routine_schema = 'public' 
+        WHERE routine_schema = 'crm' 
         AND routine_type = 'FUNCTION'
     ) LOOP
-        EXECUTE 'DROP FUNCTION IF EXISTS public.' || quote_ident(r.routine_name) || '() CASCADE';
+        EXECUTE 'DROP FUNCTION IF EXISTS crm.' || quote_ident(r.routine_name) || '() CASCADE';
     END LOOP;
 END $$;
 
--- 4. Drop ALL tables in public schema (CASCADE dropa tudo relacionado)
+-- 4. Drop ALL tables in crm schema (CASCADE dropa tudo relacionado)
 DO $$ 
 DECLARE
     r RECORD;
 BEGIN
-    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
-        EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'crm') LOOP
+        EXECUTE 'DROP TABLE IF EXISTS crm.' || quote_ident(r.tablename) || ' CASCADE';
     END LOOP;
 END $$;
 

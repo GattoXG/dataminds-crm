@@ -126,6 +126,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             prefetch="contacts"
           />
           <NavItem
+            to="/activities"
+            icon={CalendarCheck}
+            label="Atividades"
+            active={location.pathname === '/activities'}
+            prefetch="activities"
+          />
+          <NavItem
+            to="/decisions"
+            icon={Zap}
+            label="Decisões"
+            active={location.pathname === '/decisions'}
+            prefetch="decisions"
+          />
+          <NavItem
             to="/reports"
             icon={BarChart3}
             label="Relatórios"
