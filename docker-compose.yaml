@@ -9,6 +9,8 @@ services:
         - VITE_GEMINI_API_KEY=${VITE_GEMINI_API_KEY}
     container_name: dataminds-crm
     restart: unless-stopped
+    networks:
+      - coolify
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
       interval: 30s
@@ -18,3 +20,7 @@ services:
     labels:
       - "com.nossocrm.description=Dataminds CRM"
       - "traefik.http.services.nossocrm.loadbalancer.server.port=80"
+
+networks:
+  coolify:
+    external: true
