@@ -8,8 +8,6 @@ services:
         - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
         - VITE_GEMINI_API_KEY=${VITE_GEMINI_API_KEY}
     restart: unless-stopped
-    labels:
-      - "traefik.docker.network=${COOLIFY_RESOURCE_UUID}"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
       interval: 30s
