@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Tests
+coverage/
+.nyc_output/
+e2e/
+
+# Environment files (serão passados via docker-compose)
+.env
+.env.*
+!.env.example
+
+# Misc
+*.md
+docs/
+supabase/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__mocks__/
+test/
+
+# Husky
+.husky/

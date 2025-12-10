@@ -4,6 +4,17 @@ Este guia vai te ajudar a fazer deploy do NossoCRM em **~5-7 minutos**.
 
 ---
 
+## Opções de Deploy
+
+| Método | Descrição | Documentação |
+|--------|-----------|--------------|
+| **Vercel** | Deploy rápido e gratuito | Este documento |
+| **Docker (VPS)** | Hospedagem própria | [DEPLOY_DOCKER.md](./DEPLOY_DOCKER.md) |
+
+---
+
+## Deploy via Vercel
+
 ## Pré-requisitos
 
 Você vai precisar de contas (todas gratuitas):
