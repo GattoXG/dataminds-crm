@@ -7,19 +7,12 @@ services:
         - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
         - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
         - VITE_GEMINI_API_KEY=${VITE_GEMINI_API_KEY}
-    container_name: dataminds-crm
     restart: unless-stopped
-    networks:
-      - coolify
+    expose:
+      - "80"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
-    labels:
-      - "com.nossocrm.description=Dataminds CRM"
-
-networks:
-  coolify:
-    external: true
