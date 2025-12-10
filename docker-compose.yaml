@@ -19,7 +19,6 @@ services:
       start_period: 10s
     labels:
       - "com.nossocrm.description=Dataminds CRM"
-      - "traefik.http.services.nossocrm.loadbalancer.server.port=80"
 
 networks:
   coolify:
