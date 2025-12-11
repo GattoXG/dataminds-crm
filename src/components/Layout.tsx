@@ -18,6 +18,7 @@ import {
   LogOut,
   User,
   Bug,
+  Package,
 } from 'lucide-react';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
@@ -91,7 +92,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               N
             </div>
             <span className="text-xl font-bold font-display tracking-tight text-slate-900 dark:text-white">
-              NossoCRM
+              DataMinds
             </span>
           </div>
         </div>
@@ -124,6 +125,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             label="Contatos"
             active={location.pathname === '/contacts'}
             prefetch="contacts"
+          />
+          <NavItem
+            to="/products"
+            icon={Package}
+            label="Produtos"
+            active={location.pathname === '/products'}
+            prefetch="products"
           />
           <NavItem
             to="/activities"

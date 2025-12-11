@@ -80,6 +80,9 @@ export interface Product {
   description?: string;
   price: number;
   sku?: string;
+  active?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DealItem {

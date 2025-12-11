@@ -38,6 +38,9 @@ const DecisionQueuePage = lazy(() =>
 const ProfilePage = lazy(() =>
   import('@/features/profile/ProfilePage').then(m => ({ default: m.ProfilePage }))
 );
+const ProductsPage = lazy(() =>
+  import('@/features/products/ProductsPage').then(m => ({ default: m.ProductsPage }))
+);
 
 // Layout wrapper for protected routes
 const ProtectedLayout: React.FC = () => (
@@ -71,6 +74,7 @@ const App: React.FC = () => {
                       <Route path="boards" element={<BoardsPage />} />
                       <Route path="pipeline" element={<BoardsPage />} />
                       <Route path="contacts" element={<ContactsPage />} />
+                      <Route path="products" element={<ProductsPage />} />
                       <Route path="settings/*" element={<Settings />} />
                       <Route path="activities" element={<ActivitiesPage />} />
                       <Route path="reports" element={<ReportsPage />} />

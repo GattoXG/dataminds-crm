@@ -161,6 +161,14 @@ export const queryKeys = {
     funnel: ['dashboard', 'funnel'] as const,
     timeline: ['dashboard', 'timeline'] as const,
   },
+
+  // Products
+  products: {
+    all: ['products'] as const,
+    allIncludingInactive: ['products', 'all'] as const,
+    details: () => [...queryKeys.products.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.products.details(), id] as const,
+  },
 };
 
 // ============ CUSTOM HOOKS ============

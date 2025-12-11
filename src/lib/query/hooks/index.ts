@@ -71,3 +71,13 @@ export {
   useDeleteBoardStage,
   useInvalidateBoards,
 } from './useBoardsQuery';
+
+// Products
+export {
+  useProducts,
+  useProduct,
+  useCreateProduct,
+  useUpdateProduct,
+  useDeleteProduct,
+  useToggleProductActive,
+} from './useProductsQuery';
