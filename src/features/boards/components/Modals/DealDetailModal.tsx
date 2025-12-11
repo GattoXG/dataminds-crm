@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useCRM } from '@/context/CRMContext';
 import { useToast } from '@/context/ToastContext';
+import { useProducts } from '@/lib/query/hooks';
 import ConfirmModal from '@/components/ConfirmModal';
 import { Activity } from '@/types';
 import {
@@ -67,7 +68,6 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
     addActivity,
     updateActivity,
     deleteActivity,
-    products,
     addItemToDeal,
     removeItemFromDeal,
     customFieldDefinitions,
@@ -82,6 +82,9 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
     aiAnthropicCaching,
   } = useCRM();
   const { addToast } = useToast();
+  
+  // Fetch products from TanStack Query
+  const { data: products = [] } = useProducts();
 
   const deal = deals.find(d => d.id === dealId);
   const contact = deal ? contacts.find(c => c.id === deal.contactId) : null;
