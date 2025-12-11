@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productsService, ProductInsert } from '@/lib/supabase/products';
 import { Product } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { queryKeys } from '../queryKeys';
+import { queryKeys } from '../index';
 
 // ============================================
 // QUERIES
